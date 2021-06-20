@@ -1,0 +1,23 @@
+.userForm {
+    width: 50%;
+    margin : 5rem auto;
+    border: 1px solid grey;
+    padding: 2rem;
+    border-radius: .5rem;
+}
+
+
+.createUser
+{
+
+}
+
+
+.createUser>input {
+    margin-bottom: .5rem;
+}
+.createButton{
+    width: 100%;
+    margin-top: 1rem;
+    
+}
