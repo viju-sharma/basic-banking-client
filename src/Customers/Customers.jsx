@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Navigation from "../Navbar/Navbar";
-import { Button, Table, Modal } from "react-bootstrap";
+import { Button, Table, Modal, InputGroup, Form } from "react-bootstrap";
+import classes from "./Customers.module.css";
 const axios = require("axios");
 
 const Customers = () => {
@@ -8,11 +9,15 @@ const Customers = () => {
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
+  const [allEmails, setAllEmails] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [selectedCustomer, setSelectedCustomer] = useState();
+  const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [values, setValues] = useState({ to_acc: "", balance: "" });
+  const [isDisabled, setDisabled] = useState(true);
+  const [availableBalance, setAvailableBalance] = useState("");
   const getCustomers = async () => {
     try {
-      const res = await axios.get("http://localhost:4000/api/customers");
+      const res = await axios.get("https://basic-banking-server.herokuapp.com/api/customers");
       setCustomers(res.data);
     } catch (error) {
       console.log(error);
@@ -20,42 +25,76 @@ const Customers = () => {
   };
 
   useEffect(() => {
+    getCustomersEmails();
     getCustomers();
   }, []);
-  console.log(selectedCustomer);
 
-  // const getCustomersEmail = async () => {
-  //   const from_acc = document.getElementById("from_acc");
+  useEffect(() => {
+    if (values.to_acc !== "") {
+      setDisabled(false);
+    } else {
+      setDisabled(true);
+    }
+  }, [values, selectedCustomer]);
 
-  //   for (var i = 0; i < customers.length; i++) {
-  //     var option = document.createElement("OPTION");
-  //     option.innerHTML = await customers[i].email;
-  //     option.value = await customers[i].fname;
-  //     from_acc.appendChild(option);
-  //   }
-  // };
-  // console.log(customers[0].email);
-
-  const showCustomers = customers.map((customer, index) => (
-    <tr key={index} style={{ textAlign: "center" }}>
-      <td>{index + 1}</td>
-      <td>{customer.fname}</td>
-      <td>{customer.lname}</td>
-      <td>{customer.email}</td>
-      <td>{customer.currentBalance}</td>
-      <td>
-        <Button
-          value={customer.email}
-          onClick={(e) => {
-            setSelectedCustomer(e.target.value);
-            handleShow();
-          }}
-        >
-          Select
-        </Button>
-      </td>
-    </tr>
+  const getCustomersEmails = async () => {
+    try {
+      const res = await axios.get("https://basic-banking-server.herokuapp.com/api/allemail");
+      setAllEmails(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const showEmails = allEmails.map((email, index) => (
+    <option key={index}>{email.email}</option>
   ));
+
+  const showCustomers = customers
+    .filter((customer) => customer.email !== selectedCustomer)
+    .map((customer, index) => (
+      <tr key={index} style={{ textAlign: "center" }}>
+        <td>{index + 1}</td>
+        <td>{customer.fname}</td>
+        <td>{customer.lname}</td>
+        <td>{customer.email}</td>
+        <td>{customer.currentBalance}</td>
+        <td>
+          <Button
+            onClick={(e) => {
+              setSelectedCustomer(customer.email);
+              setAvailableBalance(customer.currentBalance);
+              handleShow();
+            }}
+          >
+            Select
+          </Button>
+        </td>
+      </tr>
+    ));
+
+  const handleSubmit = async () => {
+    const { to_acc, balance } = values;
+    const from_acc = selectedCustomer;
+    const transaction = { from_acc, to_acc, balance };
+    try {
+      await axios.post("https://basic-banking-server.herokuapp.com/api/transfer", transaction);
+      window.location.href = "/transfers";
+    } catch (error) {
+      console.log(error);
+    }
+    try {
+      await axios.post("https://basic-banking-server.herokuapp.com/api/updateBalance", transaction);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleChange = (e) => {
+    setValues({
+      ...values,
+      [e.target.name]: e.target.value,
+    });
+  };
 
   return (
     <React.Fragment>
@@ -65,24 +104,55 @@ const Customers = () => {
           onHide={handleClose}
           backdrop="static"
           keyboard={false}
-          centered
+          centered={true}
+          className={classes.modal}
+          size="lg"
+          animation={false}
         >
-          <Modal.Header>
+          <Modal.Header className={classes.modalHeader}>
             <Modal.Title>Transfer Money</Modal.Title>
           </Modal.Header>
-          <Modal.Body>
+          <Modal.Body className={classes.modalBody}>
             <div>
-              <h1>From</h1>
-              <select id="from_acc">
-                <option>Open this select menu</option>
-              </select>
+              <form onSubmit={handleSubmit}>
+                <h3>From Account :</h3>
+
+                <select className="form-select" name="from_acc">
+                  <option>{selectedCustomer}</option>
+                </select>
+                <h3>To Account :</h3>
+                <select
+                  name="to_acc"
+                  onChange={handleChange}
+                  className="form-select"
+                >
+                  <option value=""> -- Select An Existing Account -- </option>
+                  {showEmails}
+                </select>
+                <Form.Label>Balance</Form.Label>
+                <InputGroup className="mb-3">
+                  <InputGroup.Text>$</InputGroup.Text>
+                  <Form.Control
+                    required
+                    name="balance"
+                    placeholder="Balance"
+                    type="number"
+                    min="0"
+                    onChange={handleChange}
+                    max={availableBalance}
+                  />
+                  <InputGroup.Text>.00</InputGroup.Text>
+                </InputGroup>
+                <Button variant="primary" type="submit" disabled={isDisabled}>
+                  Transfer
+                </Button>
+              </form>
             </div>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={handleClose}>
               Close
             </Button>
-            <Button variant="primary">Understood</Button>
           </Modal.Footer>
         </Modal>
       </div>

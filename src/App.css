@@ -1,3 +1,15 @@
+body {
+  background-image: url('./coins.jpg');
+  width: 100%;
+  background-size: 100% 100%;
+  background-repeat: repeat-y;
+  background-position: center;
+  height: 110vh;
+  
+
+}
+
+
 .App {
   text-align: center;
 }
